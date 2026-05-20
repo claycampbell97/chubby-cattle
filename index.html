@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chubby Cattle — Value Scoreboard</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
 
@@ -210,6 +212,101 @@
   .reset-btn:active { opacity:.7; }
   .portion-note { font-size:clamp(8px,1.5vw,10px);color:var(--steel-light);font-style:italic;padding:4px 10px 8px;line-height:1.5; }
 
+  /* ── Finish Meal Button ── */
+  .finish-btn {
+    display:block;margin:14px auto 6px;
+    font-family:'Press Start 2P',monospace;font-size:clamp(10px,2.5vw,14px);
+    color:#fff;background:linear-gradient(180deg,#f5a623,#e8871e);border:3px solid #ffd700;border-radius:10px;
+    padding:16px 32px;cursor:pointer;letter-spacing:2px;
+    box-shadow:0 4px 0 #b06a00,0 0 24px rgba(255,215,0,.3);
+    transition:all .1s;-webkit-tap-highlight-color:transparent;
+    text-shadow:1px 1px 0 rgba(0,0,0,.3);
+  }
+  .finish-btn:active { transform:translateY(3px);box-shadow:0 1px 0 #b06a00; }
+
+  /* ── Finish Modal ── */
+  .finish-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1001;display:flex;align-items:center;justify-content:center;padding:16px; }
+  .finish-overlay.hidden { display:none; }
+  .finish-box {
+    background:linear-gradient(180deg,#1e0e36,#0a0a0a);
+    border:3px solid var(--gold);border-radius:14px;
+    padding:28px 22px;max-width:440px;width:100%;text-align:center;
+    box-shadow:0 0 80px rgba(255,215,0,.25);animation:modalPop .35s ease-out;
+  }
+  .finish-box h2 { font-family:'Press Start 2P',monospace;font-size:clamp(12px,3vw,18px);color:var(--gold);margin-bottom:16px;line-height:1.5; }
+  .finish-score { font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(32px,8vw,56px);margin:12px 0;text-shadow:0 0 20px currentColor; }
+  .finish-score.positive { color:var(--led-green); }
+  .finish-score.negative { color:var(--led-red); }
+  .finish-stats { font-family:'Share Tech Mono',monospace;font-size:clamp(11px,2.5vw,14px);color:var(--chrome);margin-bottom:20px;line-height:1.8; }
+  .finish-input {
+    width:100%;max-width:280px;padding:12px;margin:0 auto 16px;display:block;
+    background:#1a1a1a;border:2px solid #4a2d7a;border-radius:6px;
+    color:var(--gold);font-family:'Press Start 2P',monospace;font-size:clamp(10px,2.5vw,14px);
+    text-align:center;outline:none;
+  }
+  .finish-input::placeholder { color:var(--steel-light);font-size:clamp(8px,2vw,11px); }
+  .finish-input:focus { border-color:var(--gold);box-shadow:0 0 12px rgba(255,215,0,.2); }
+  .finish-save-btn {
+    font-family:'Press Start 2P',monospace;font-size:clamp(9px,2vw,12px);
+    padding:12px 28px;border:2px solid var(--led-green);border-radius:6px;
+    background:var(--led-green);color:#000;cursor:pointer;
+    transition:all .15s;-webkit-tap-highlight-color:transparent;
+  }
+  .finish-save-btn:hover { box-shadow:0 0 20px rgba(57,255,20,.5); }
+  .finish-skip-btn {
+    font-family:'Share Tech Mono',monospace;font-size:clamp(10px,2vw,12px);
+    padding:8px 16px;border:none;background:transparent;color:var(--steel-light);
+    cursor:pointer;margin-top:8px;text-decoration:underline;display:block;margin-left:auto;margin-right:auto;
+  }
+
+  /* ── Leaderboard ── */
+  .leaderboard {
+    max-width:900px;margin:12px auto;border:3px solid #4a2d7a;border-radius:12px;
+    background:#0a0a0a;box-shadow:0 0 30px rgba(75,30,130,.3);overflow:hidden;
+  }
+  .lb-header {
+    background:linear-gradient(90deg,#2a1548,#3d2066);padding:12px 16px;
+    display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;
+  }
+  .lb-header h2 { font-family:'Press Start 2P',monospace;font-size:clamp(9px,2.2vw,13px);color:var(--gold);letter-spacing:1px; }
+  .lb-header .lb-toggle { color:var(--chrome);font-size:14px;transition:transform .2s; }
+  .leaderboard.collapsed .lb-body { display:none; }
+  .leaderboard.collapsed .lb-toggle { transform:rotate(-90deg); }
+  .lb-body { padding:8px; }
+  .lb-empty { text-align:center;padding:20px;font-family:'Share Tech Mono',monospace;color:var(--steel-light);font-size:clamp(10px,2vw,13px); }
+  .lb-row {
+    display:flex;align-items:center;padding:8px 10px;gap:8px;
+    border-bottom:1px solid rgba(255,255,255,.07);
+  }
+  .lb-row:last-child { border-bottom:none; }
+  .lb-rank {
+    font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(14px,3vw,20px);
+    min-width:36px;text-align:center;flex-shrink:0;
+  }
+  .lb-rank.gold { color:var(--gold); }
+  .lb-rank.silver { color:#c0c0c0; }
+  .lb-rank.bronze { color:#cd7f32; }
+  .lb-rank.normal { color:var(--steel-light); }
+  .lb-info { flex:1;min-width:0; }
+  .lb-name { font-family:'Press Start 2P',monospace;font-size:clamp(8px,1.8vw,11px);color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .lb-meta { font-family:'Share Tech Mono',monospace;font-size:clamp(8px,1.5vw,10px);color:var(--steel-light);margin-top:3px; }
+  .lb-net {
+    font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(14px,3vw,18px);
+    flex-shrink:0;text-align:right;min-width:70px;
+  }
+  .lb-net.positive { color:var(--led-green);text-shadow:0 0 8px rgba(57,255,20,.3); }
+  .lb-net.negative { color:var(--led-red);text-shadow:0 0 8px rgba(255,26,26,.3); }
+  .lb-clear-btn {
+    display:block;margin:8px auto;padding:6px 14px;
+    font-family:'Press Start 2P',monospace;font-size:clamp(6px,1.2vw,8px);
+    color:var(--steel-light);background:transparent;border:1px solid var(--steel-light);border-radius:4px;
+    cursor:pointer;letter-spacing:1px;
+  }
+  .lb-clear-btn:hover { color:var(--led-red);border-color:var(--led-red); }
+
+  /* ── Confetti ── */
+  .confetti-canvas { position:fixed;inset:0;z-index:1002;pointer-events:none; }
+
   @media(max-width:500px) {
     body { padding:4px; }
     .score-display { flex-wrap:wrap; }
@@ -281,8 +378,30 @@
   <div class="sections" id="sectionsContainer"></div>
   <div class="footer">
     <p>TAP HEADERS TO COLLAPSE &bull; TRACK VALUE IN REAL TIME</p>
+    <button class="finish-btn" id="finishBtn" onclick="openFinish()">DONE EATING</button>
     <button class="reset-btn" onclick="resetAll()">RESET SCOREBOARD</button>
   </div>
+</div>
+
+<!-- ═══ Finish Modal ═══ -->
+<div class="finish-overlay hidden" id="finishOverlay">
+  <div class="finish-box">
+    <h2>MEAL COMPLETE!</h2>
+    <div class="finish-score" id="finishScore">+$0</div>
+    <div class="finish-stats" id="finishStats"></div>
+    <input class="finish-input" id="finishName" type="text" placeholder="ENTER YOUR NAME" maxlength="20" autocomplete="off">
+    <button class="finish-save-btn" onclick="saveScore()">SAVE TO LEADERBOARD</button>
+    <button class="finish-skip-btn" onclick="skipSave()">skip &amp; start new meal</button>
+  </div>
+</div>
+
+<!-- ═══ Leaderboard ═══ -->
+<div class="leaderboard" id="leaderboard">
+  <div class="lb-header" onclick="document.getElementById('leaderboard').classList.toggle('collapsed')">
+    <h2>LEADERBOARD</h2>
+    <span class="lb-toggle">▼</span>
+  </div>
+  <div class="lb-body" id="lbBody"></div>
 </div>
 
 <script>
@@ -733,6 +852,195 @@ function resetAll() {
   buildSections();
   calculateTotals();
 }
+
+/* ══════════════════════════════════════════
+   FIREBASE + LEADERBOARD
+   ══════════════════════════════════════════ */
+const fbApp = firebase.initializeApp({
+  apiKey: "AIzaSyC57WkPlyoXXPkbuAF7nYIf9KU2BXV_CwU",
+  authDomain: "chubby-cattle-81e77.firebaseapp.com",
+  databaseURL: "https://chubby-cattle-81e77-default-rtdb.firebaseio.com",
+  projectId: "chubby-cattle-81e77",
+  storageBucket: "chubby-cattle-81e77.firebasestorage.app",
+  messagingSenderId: "601328379227",
+  appId: "1:601328379227:web:26ddc7432043b7927fe67e"
+});
+const db = firebase.database();
+const lbRef = db.ref('leaderboard');
+
+let cachedLeaderboard = [];
+
+function getCurrentScore() {
+  let foodValue = 0, extraCost = 0;
+  for (const [key, sec] of Object.entries(DATA)) {
+    if (sec.type === "dropdown") {
+      state.dropdowns[key].forEach(idx => { foodValue += sec.items[idx].value; });
+    } else if (sec.type === "drinks") {
+      flatDrinkItems().forEach((item, i) => { extraCost += (state.counters[`${key}_${i}`] || 0) * item.cost; });
+    } else {
+      sec.items.forEach((item, i) => { foodValue += (state.counters[`${key}_${i}`] || 0) * item.value; });
+    }
+  }
+  const totalCost = BASE_COST + extraCost;
+  const net = foodValue - totalCost;
+  let totalItems = 0;
+  for (const v of Object.values(state.counters)) totalItems += v;
+  return { foodValue, totalCost, extraCost, net, totalItems };
+}
+
+function openFinish() {
+  const s = getCurrentScore();
+  const overlay = document.getElementById('finishOverlay');
+  const scoreEl = document.getElementById('finishScore');
+  const statsEl = document.getElementById('finishStats');
+  const absNet = Math.abs(s.net);
+  const netFmt = absNet % 1 === 0 ? absNet : absNet.toFixed(2);
+  scoreEl.textContent = s.net >= 0 ? `+$${netFmt}` : `-$${netFmt}`;
+  scoreEl.className = `finish-score ${s.net >= 0 ? 'positive' : 'negative'}`;
+  const tier = TIERS[activeTier];
+  statsEl.innerHTML = [
+    `${tier.name} Tier ${isMember ? '(Member)' : ''}`,
+    `Food Value: $${s.foodValue} &bull; Cost: $${s.totalCost % 1 === 0 ? s.totalCost : s.totalCost.toFixed(2)}`,
+    `Items consumed: ${s.totalItems}`,
+    s.extraCost > 0 ? `Drinks: $${s.extraCost}` : ''
+  ].filter(Boolean).join('<br>');
+  document.getElementById('finishName').value = '';
+  overlay.classList.remove('hidden');
+  launchConfetti();
+}
+
+function launchConfetti() {
+  const canvas = document.createElement('canvas');
+  canvas.className = 'confetti-canvas';
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  const colors = ['#ff2d95','#00e5ff','#ffe600','#39ff14','#ffd700','#ff1a1a','#9944cc','#ff69b4'];
+  const pieces = [];
+  for (let i = 0; i < 150; i++) {
+    pieces.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height * -1,
+      w: Math.random() * 8 + 4,
+      h: Math.random() * 6 + 3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      vx: (Math.random() - 0.5) * 6,
+      vy: Math.random() * 4 + 2,
+      rot: Math.random() * 360,
+      rv: (Math.random() - 0.5) * 12,
+      opacity: 1
+    });
+  }
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    pieces.forEach(p => {
+      p.x += p.vx;
+      p.vy += 0.08;
+      p.y += p.vy;
+      p.rot += p.rv;
+      if (frame > 60) p.opacity = Math.max(0, p.opacity - 0.015);
+      if (p.opacity <= 0) return;
+      alive = true;
+      ctx.save();
+      ctx.globalAlpha = p.opacity;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    frame++;
+    if (alive && frame < 200) requestAnimationFrame(draw);
+    else canvas.remove();
+  }
+  requestAnimationFrame(draw);
+}
+
+function saveScore() {
+  const name = document.getElementById('finishName').value.trim() || 'ANONYMOUS';
+  const s = getCurrentScore();
+  const tier = TIERS[activeTier];
+  const entry = {
+    name,
+    net: s.net,
+    foodValue: s.foodValue,
+    totalCost: s.totalCost,
+    items: s.totalItems,
+    tier: tier.name,
+    member: isMember,
+    date: new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
+    time: new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' }),
+    id: Date.now()
+  };
+  lbRef.push(entry);
+  document.getElementById('finishOverlay').classList.add('hidden');
+  startNewMeal();
+}
+
+function skipSave() {
+  document.getElementById('finishOverlay').classList.add('hidden');
+  startNewMeal();
+}
+
+function startNewMeal() {
+  document.getElementById('scoreboard').classList.add('locked');
+  document.getElementById('timerBar').classList.remove('visible');
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  timerStarted = false;
+  document.getElementById('gameOverBanner').style.display = 'none';
+  document.getElementById('memberModal').classList.remove('hidden');
+}
+
+function renderLeaderboard(lb) {
+  if (lb === undefined) lb = cachedLeaderboard;
+  const body = document.getElementById('lbBody');
+  if (!lb.length) {
+    body.innerHTML = '<div class="lb-empty">No scores yet. Finish a meal to get on the board!</div>';
+    return;
+  }
+  let html = '';
+  lb.forEach((e, i) => {
+    const rank = i + 1;
+    const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : 'normal';
+    const absNet = Math.abs(e.net);
+    const netFmt = absNet % 1 === 0 ? absNet : absNet.toFixed(2);
+    const netStr = e.net >= 0 ? `+$${netFmt}` : `-$${netFmt}`;
+    const netClass = e.net >= 0 ? 'positive' : 'negative';
+    html += `<div class="lb-row">
+      <div class="lb-rank ${rankClass}">#${rank}</div>
+      <div class="lb-info">
+        <div class="lb-name">${escHtml(e.name)}</div>
+        <div class="lb-meta">${e.tier} ${e.member ? '(M)' : ''} &bull; ${e.items} items &bull; ${e.date}</div>
+      </div>
+      <div class="lb-net ${netClass}">${netStr}</div>
+    </div>`;
+  });
+  html += '<button class="lb-clear-btn" onclick="clearLeaderboard()">CLEAR LEADERBOARD</button>';
+  body.innerHTML = html;
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function clearLeaderboard() {
+  if (!confirm('Clear the entire leaderboard?')) return;
+  lbRef.remove();
+}
+
+lbRef.on('value', (snapshot) => {
+  const data = snapshot.val();
+  if (!data) { cachedLeaderboard = []; renderLeaderboard([]); return; }
+  const lb = Object.values(data);
+  lb.sort((a, b) => b.net - a.net);
+  cachedLeaderboard = lb;
+  renderLeaderboard(lb);
+});
 
 /* ══════════════════════════════════════════
    DINNER TIMER
