@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chubby Cattle — Value Scoreboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --carpet-base: #1a0a2e;
+    --carpet-mid: #2d1b4e;
+    --led-red: #ff1a1a;
+    --led-green: #39ff14;
+    --led-amber: #ffbf00;
+    --neon-pink: #ff2d95;
+    --neon-teal: #00e5ff;
+    --neon-yellow: #ffe600;
+    --steel: #3a3a3a;
+    --steel-light: #5a5a5a;
+    --chrome: #b0b0b0;
+    --board-bg: #111;
+    --section-bg: rgba(0,0,0,0.55);
+    --white: #f0f0e8;
+    --gold: #ffd700;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: var(--carpet-base);
+    background-image:
+      radial-gradient(circle 6px at 15% 20%, var(--neon-pink) 0%, var(--neon-pink) 5px, transparent 6px),
+      radial-gradient(circle 4px at 75% 12%, var(--neon-teal) 0%, var(--neon-teal) 3px, transparent 4px),
+      radial-gradient(circle 5px at 45% 80%, var(--neon-yellow) 0%, var(--neon-yellow) 4px, transparent 5px),
+      radial-gradient(circle 3px at 88% 65%, var(--led-green) 0%, var(--led-green) 2px, transparent 3px),
+      radial-gradient(circle 5px at 25% 55%, var(--neon-teal) 0%, var(--neon-teal) 4px, transparent 5px),
+      radial-gradient(circle 4px at 60% 40%, var(--neon-pink) 0%, var(--neon-pink) 3px, transparent 4px),
+      radial-gradient(circle 3px at 92% 30%, var(--neon-yellow) 0%, var(--neon-yellow) 2px, transparent 3px),
+      radial-gradient(circle 6px at 8% 90%, var(--led-green) 0%, var(--led-green) 5px, transparent 6px),
+      radial-gradient(circle 4px at 50% 10%, var(--neon-pink) 0%, var(--neon-pink) 3px, transparent 4px),
+      radial-gradient(circle 3px at 35% 35%, var(--neon-yellow) 0%, var(--neon-yellow) 2px, transparent 3px),
+      radial-gradient(circle 5px at 70% 75%, var(--neon-teal) 0%, var(--neon-teal) 4px, transparent 5px),
+      radial-gradient(circle 4px at 5% 50%, var(--neon-yellow) 0%, var(--neon-yellow) 3px, transparent 4px),
+      linear-gradient(135deg, transparent 40%, rgba(255,45,149,0.04) 40%, rgba(255,45,149,0.04) 42%, transparent 42%),
+      linear-gradient(225deg, transparent 45%, rgba(0,229,255,0.04) 45%, rgba(0,229,255,0.04) 47%, transparent 47%),
+      linear-gradient(315deg, transparent 50%, rgba(255,230,0,0.03) 50%, rgba(255,230,0,0.03) 52%, transparent 52%),
+      linear-gradient(180deg, var(--carpet-base) 0%, var(--carpet-mid) 50%, var(--carpet-base) 100%);
+    background-size:
+      200px 200px, 200px 200px, 200px 200px, 200px 200px,
+      200px 200px, 200px 200px, 200px 200px, 200px 200px,
+      200px 200px, 200px 200px, 200px 200px, 200px 200px,
+      300px 300px, 300px 300px, 300px 300px, 100% 100%;
+    color: var(--white);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    padding: 10px;
+  }
+
+  /* ── Scene: Cow + People ── */
+  .scene-wrap { display:flex;align-items:flex-end;justify-content:center;margin:14px auto 6px;gap:4px; }
+  .people-group { display:flex;gap:3px;align-items:flex-end; }
+  .pixel-cow-wrap { width:168px;height:154px;overflow:hidden;image-rendering:pixelated;flex-shrink:0; }
+  .pixel-cow { width:1px;height:1px;background:transparent;transform:scale(7);transform-origin:top left; }
+  .person-wrap { width:20px;height:40px;overflow:hidden;image-rendering:pixelated; }
+  .person-px { width:1px;height:1px;background:transparent;transform:scale(4);transform-origin:top left; }
+
+  /* ── Modal Overlay ── */
+  .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto; }
+  .modal-overlay.hidden { display:none; }
+  .modal-box {
+    background:linear-gradient(180deg,#1e0e36,#0a0a0a);
+    border:3px solid var(--gold);border-radius:12px;
+    padding:28px 20px;max-width:420px;width:100%;text-align:center;
+    box-shadow:0 0 60px rgba(255,215,0,0.2),0 0 80px rgba(75,30,130,0.4),0 0 120px rgba(0,0,0,0.8);
+    animation:modalPop .35s ease-out;
+  }
+  .modal-box.wide { max-width:760px; }
+  @keyframes modalPop { 0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1} }
+  .modal-box h2 { font-family:'Press Start 2P',monospace;font-size:clamp(10px,3vw,16px);color:var(--gold);text-shadow:0 0 12px rgba(255,215,0,.5);margin-bottom:6px;line-height:1.6; }
+  .modal-box .modal-sub { font-family:'Orbitron',sans-serif;font-size:clamp(9px,2vw,12px);color:var(--chrome);margin-bottom:20px;letter-spacing:2px; }
+  .modal-box .modal-question { font-family:'Share Tech Mono',monospace;font-size:clamp(13px,3vw,18px);color:var(--white);margin-bottom:20px;line-height:1.5; }
+  .modal-buttons { display:flex;gap:14px;justify-content:center;flex-wrap:wrap; }
+  .modal-btn {
+    font-family:'Press Start 2P',monospace;font-size:clamp(9px,2vw,12px);
+    padding:14px 24px;border:2px solid;border-radius:6px;cursor:pointer;
+    transition:all .15s;min-width:130px;-webkit-tap-highlight-color:transparent;
+  }
+  .modal-btn.yes { background:var(--led-green);color:#000;border-color:var(--led-green); }
+  .modal-btn.yes:hover { box-shadow:0 0 20px rgba(57,255,20,.5); }
+  .modal-btn.no { background:transparent;color:var(--led-amber);border-color:var(--led-amber); }
+  .modal-btn.no:hover { box-shadow:0 0 20px rgba(255,191,0,.3); }
+  .modal-price-hint { font-family:'Orbitron',sans-serif;font-size:clamp(8px,1.5vw,10px);display:block;margin-top:6px;opacity:.8; }
+  .modal-btn.yes .modal-price-hint { color:#064006; }
+  .modal-btn.no .modal-price-hint { color:var(--steel-light); }
+
+  /* ── Tier Cards ── */
+  .tier-cards { display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:6px; }
+  .tier-card {
+    background:#1a0e2e;border:2px solid #4a2d7a;border-radius:10px;
+    padding:16px 14px;flex:1;min-width:180px;max-width:230px;cursor:pointer;
+    transition:all .2s;text-align:center;
+  }
+  .tier-card:hover { border-color:var(--gold);box-shadow:0 0 18px rgba(255,215,0,.2); }
+  .tier-card .tc-name { font-family:'Press Start 2P',monospace;font-size:clamp(10px,2.5vw,14px);margin-bottom:8px;line-height:1.4; }
+  .tier-card .tc-price { font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(18px,4vw,28px);margin-bottom:4px; }
+  .tier-card .tc-orig { font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--steel-light);text-decoration:line-through;margin-bottom:8px; }
+  .tier-card .tc-feat { font-family:'Share Tech Mono',monospace;font-size:clamp(8px,1.8vw,11px);color:var(--chrome);line-height:1.5;text-align:left; }
+  .tier-card.silver .tc-name { color:#c0c0c0; }
+  .tier-card.gold .tc-name { color:var(--gold); }
+  .tier-card.diamond .tc-name { color:#b9f2ff; }
+  .tier-card.silver .tc-price { color:#c0c0c0; }
+  .tier-card.gold .tc-price { color:var(--gold); }
+  .tier-card.diamond .tc-price { color:#b9f2ff; }
+  .tier-card.recommended { border-color:var(--gold);box-shadow:0 0 12px rgba(255,215,0,.15); }
+  .tier-card.recommended::before {
+    content:'★ RECOMMENDED';display:block;
+    font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold);
+    margin-bottom:8px;letter-spacing:1px;
+  }
+
+  /* ── Timer Bar ── */
+  .timer-bar {
+    position:sticky;top:0;z-index:100;
+    max-width:900px;margin:0 auto 6px;
+    background:linear-gradient(180deg,#1a0e2e,#0a0a0a);
+    border:3px solid #4a2d7a;border-radius:10px;
+    overflow:hidden;display:none;
+  }
+  .timer-bar.visible { display:block; }
+  .timer-inner { display:flex;align-items:center;justify-content:center;gap:clamp(8px,3vw,24px);padding:10px 12px;flex-wrap:wrap; }
+  .timer-block { text-align:center; }
+  .timer-label { font-family:'Press Start 2P',monospace;font-size:clamp(6px,1.5vw,8px);color:var(--chrome);margin-bottom:4px;letter-spacing:1px; }
+  .timer-digits {
+    font-family:'Orbitron',sans-serif;font-weight:900;
+    font-size:clamp(20px,5vw,36px);color:var(--led-green);
+    text-shadow:0 0 14px currentColor;transition:color .3s;
+    min-width:clamp(80px,20vw,140px);
+  }
+  .timer-digits.warning { color:var(--led-amber); }
+  .timer-digits.expired { color:var(--led-red); }
+  .timer-digits.pulse { animation:timerPulse 1s infinite; }
+  @keyframes timerPulse { 0%,100%{opacity:1}50%{opacity:.3} }
+  .timer-sep { font-family:'Orbitron',sans-serif;font-size:clamp(16px,4vw,28px);color:var(--steel-light);font-weight:900; }
+  .start-timer-btn {
+    font-family:'Press Start 2P',monospace;font-size:clamp(10px,2.5vw,14px);
+    color:#fff;background:var(--led-red);border:3px solid #ff4444;border-radius:8px;
+    padding:14px 28px;cursor:pointer;letter-spacing:2px;
+    box-shadow:0 4px 0 #990000,0 0 20px rgba(255,26,26,.3);
+    transition:all .1s;-webkit-tap-highlight-color:transparent;
+    display:block;margin:0 auto;
+  }
+  .start-timer-btn:active { transform:translateY(3px);box-shadow:0 1px 0 #990000; }
+  .game-over-banner {
+    font-family:'Press Start 2P',monospace;font-size:clamp(14px,4vw,24px);
+    color:var(--led-red);text-align:center;padding:12px;
+    animation:timerPulse .5s infinite;text-shadow:0 0 20px var(--led-red);
+    display:none;
+  }
+
+  /* ── Scoreboard ── */
+  .scoreboard-frame {
+    max-width:900px;margin:0 auto;border:4px solid #4a2d7a;border-radius:12px;
+    background:var(--board-bg);box-shadow:0 0 40px rgba(75,30,130,.5),0 0 80px rgba(0,0,0,.8),inset 0 0 30px rgba(0,0,0,.5);
+    overflow:hidden;
+  }
+  .scoreboard-frame.locked { pointer-events:none;opacity:.35;filter:blur(2px); }
+  .header { background:linear-gradient(180deg,#1e0e36,#111);border-bottom:3px solid #4a2d7a;padding:18px 16px 12px;text-align:center; }
+  .header h1 { font-family:'Press Start 2P',monospace;font-size:clamp(11px,3vw,18px);color:var(--gold);text-shadow:0 0 12px rgba(255,215,0,.6);letter-spacing:2px;line-height:1.6; }
+  .header .subtitle { font-family:'Orbitron',sans-serif;font-size:clamp(9px,2vw,13px);color:var(--chrome);margin-top:6px;letter-spacing:3px;text-transform:uppercase; }
+  .score-display { display:flex;justify-content:center;align-items:stretch;background:#0a0a0a;border-bottom:3px solid #4a2d7a; }
+  .score-panel { flex:1;text-align:center;padding:16px 10px;border-right:2px solid var(--steel-light); }
+  .score-panel:last-child { border-right:none; }
+  .score-panel .label { font-family:'Press Start 2P',monospace;font-size:clamp(7px,1.8vw,10px);color:var(--chrome);margin-bottom:8px;letter-spacing:1px; }
+  .score-panel .value { font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(22px,6vw,42px);text-shadow:0 0 16px currentColor;transition:color .3s; }
+  .value-food { color:var(--led-green); }
+  .value-cost { color:var(--led-red); }
+  .value-net.positive { color:var(--led-green); }
+  .value-net.negative { color:var(--led-red); }
+  .sections { padding:10px; }
+  .section { background:rgba(20,8,40,0.7);border:2px solid #3a1f65;border-radius:8px;margin-bottom:12px;overflow:hidden; }
+  .section-header { background:linear-gradient(90deg,#2a1548,#3d2066);padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none; }
+  .section-header h2 { font-family:'Press Start 2P',monospace;font-size:clamp(8px,2vw,11px);color:var(--gold);letter-spacing:1px; }
+  .section-header .section-total { font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(12px,2.5vw,16px);color:var(--led-green); }
+  .section-header .toggle-icon { color:var(--chrome);font-size:14px;transition:transform .2s; }
+  .section.collapsed .section-body { display:none; }
+  .section.collapsed .toggle-icon { transform:rotate(-90deg); }
+  .section-body { padding:8px; }
+  .drink-category-header { font-family:'Orbitron',sans-serif;font-size:clamp(9px,2vw,11px);color:var(--led-amber);letter-spacing:2px;text-transform:uppercase;padding:10px 10px 4px;border-top:1px solid rgba(255,191,0,.15);margin-top:4px; }
+  .drink-category-header:first-child { border-top:none;margin-top:0; }
+  .selector-row { display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.07); }
+  .selector-row:last-child { border-bottom:none; }
+  .selector-row select { flex:1;background:#1a1a1a;color:var(--led-amber);border:1px solid var(--steel-light);border-radius:4px;padding:8px;font-family:'Share Tech Mono',monospace;font-size:clamp(10px,2vw,13px);cursor:pointer;appearance:auto; }
+  .selector-row .sel-value { font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(13px,2.5vw,16px);color:var(--led-green);min-width:55px;text-align:right;flex-shrink:0; }
+  .selector-label { font-family:'Press Start 2P',monospace;font-size:clamp(7px,1.5vw,9px);color:var(--led-amber);padding:8px 10px 2px;letter-spacing:1px; }
+  .item-row { display:flex;align-items:center;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.07);gap:6px; }
+  .item-row:last-child { border-bottom:none; }
+  .item-row:hover { background:rgba(255,255,255,.03); }
+  .item-name { flex:1;font-size:clamp(10px,2.2vw,13px);color:var(--white);line-height:1.3; }
+  .item-unit-price { font-size:clamp(9px,1.8vw,11px);color:var(--steel-light);min-width:38px;text-align:right;flex-shrink:0; }
+  .item-controls { display:flex;align-items:center;flex-shrink:0; }
+  .item-controls button { width:clamp(28px,7vw,36px);height:clamp(28px,7vw,36px);border:1px solid var(--steel-light);background:var(--steel);color:var(--white);font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;user-select:none;-webkit-tap-highlight-color:transparent; }
+  .item-controls button:first-child { border-radius:4px 0 0 4px; }
+  .item-controls button:last-child { border-radius:0 4px 4px 0; }
+  .item-controls button:active { background:#4a2d7a; }
+  .item-controls .count { width:clamp(28px,7vw,36px);height:clamp(28px,7vw,36px);background:#1a1a1a;border-top:1px solid var(--steel-light);border-bottom:1px solid var(--steel-light);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(12px,2.5vw,16px);color:var(--led-amber); }
+  .item-row-total { font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(12px,2.5vw,15px);color:var(--led-green);min-width:50px;text-align:right;flex-shrink:0; }
+  .drink-cost-tag { font-size:clamp(8px,1.6vw,10px);color:var(--led-red);min-width:45px;text-align:right;flex-shrink:0; }
+  .footer { text-align:center;padding:12px;border-top:2px solid #4a2d7a;background:#0a0a0a; }
+  .footer p { font-family:'Press Start 2P',monospace;font-size:clamp(6px,1.5vw,8px);color:var(--steel-light);line-height:1.8; }
+  .reset-btn { margin-top:10px;background:var(--led-red);color:#fff;border:none;border-radius:4px;padding:8px 20px;font-family:'Press Start 2P',monospace;font-size:clamp(7px,1.5vw,9px);cursor:pointer;letter-spacing:1px; }
+  .reset-btn:active { opacity:.7; }
+  .portion-note { font-size:clamp(8px,1.5vw,10px);color:var(--steel-light);font-style:italic;padding:4px 10px 8px;line-height:1.5; }
+
+  @media(max-width:500px) {
+    body { padding:4px; }
+    .score-display { flex-wrap:wrap; }
+    .score-panel { min-width:33%;border-bottom:1px solid var(--steel-light); }
+    .item-row { flex-wrap:wrap; }
+    .modal-box { padding:20px 14px; }
+    .modal-box.wide { max-width:100%; }
+    .tier-card { min-width:140px;max-width:100%;flex-basis:100%; }
+    .modal-buttons { gap:10px; }
+    .modal-btn { min-width:110px;padding:12px 14px; }
+    .timer-inner { gap:8px; }
+    .scene-wrap { transform:scale(0.85);transform-origin:center bottom; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ Modal 1: Membership ═══ -->
+<div class="modal-overlay" id="memberModal">
+  <div class="modal-box">
+    <div class="scene-wrap">
+      <div class="people-group" id="peopleLeftModal"></div>
+      <div class="pixel-cow-wrap"><div class="pixel-cow" id="pixelCowModal"></div></div>
+      <div class="people-group" id="peopleRightModal"></div>
+    </div>
+    <h2>CHUBBY CATTLE NYC</h2>
+    <div class="modal-sub">AYCE SCOREBOARD</div>
+    <div class="modal-question">Are you a<br>Chubby Club member?</div>
+    <div class="modal-buttons">
+      <button class="modal-btn yes" onclick="chooseMembership(true)">YES<span class="modal-price-hint">Member pricing</span></button>
+      <button class="modal-btn no" onclick="chooseMembership(false)">NO<span class="modal-price-hint">Regular pricing</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal 2: Tier Selection ═══ -->
+<div class="modal-overlay hidden" id="tierModal">
+  <div class="modal-box wide">
+    <h2>CHOOSE YOUR TIER</h2>
+    <div class="modal-sub" id="tierModalSub">MEMBER PRICING</div>
+    <div class="tier-cards" id="tierCards"></div>
+  </div>
+</div>
+
+<!-- ═══ Sticky Timer ═══ -->
+<div class="timer-bar" id="timerBar">
+  <div class="timer-inner" id="timerInner">
+    <button class="start-timer-btn" id="startTimerBtn" onclick="startTimer()">▶ START TIMER</button>
+  </div>
+  <div class="game-over-banner" id="gameOverBanner">🏁 GAME OVER 🏁</div>
+</div>
+
+<!-- ═══ Scoreboard ═══ -->
+<div class="scoreboard-frame locked" id="scoreboard">
+  <div class="header">
+    <div class="scene-wrap">
+      <div class="people-group" id="peopleLeftMain"></div>
+      <div class="pixel-cow-wrap"><div class="pixel-cow" id="pixelCow"></div></div>
+      <div class="people-group" id="peopleRightMain"></div>
+    </div>
+    <h1>CHUBBY CATTLE NYC</h1>
+    <div class="subtitle" id="subtitleText">Value Tracker</div>
+  </div>
+  <div class="score-display">
+    <div class="score-panel"><div class="label">FOOD VALUE</div><div class="value value-food" id="totalFoodValue">$0</div></div>
+    <div class="score-panel"><div class="label">TOTAL COST</div><div class="value value-cost" id="totalCost">$0</div></div>
+    <div class="score-panel"><div class="label">NET VALUE</div><div class="value value-net negative" id="netValue">$0</div></div>
+  </div>
+  <div class="sections" id="sectionsContainer"></div>
+  <div class="footer">
+    <p>TAP HEADERS TO COLLAPSE &bull; TRACK VALUE IN REAL TIME</p>
+    <button class="reset-btn" onclick="resetAll()">RESET SCOREBOARD</button>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   ITEM CATALOGS
+   Values calibrated from Google (4.9★/2093) & Yelp (4.4★/72) reviews.
+   A5 specials = thin yakiniku slices ~2oz. Regular meats ~2-3oz/plate.
+   ══════════════════════════════════════════ */
+
+const SILVER_MEATS = [
+  { name: "Wagyu Brisket", value: 15 },
+  { name: "M8-9 Wagyu Otoro", value: 17 },
+  { name: "Wagyu Top Blade", value: 16 },
+  { name: "Full Blood Wagyu Knuckle", value: 14 },
+  { name: "Wagyu Steak", value: 14 },
+  { name: "Miso Wagyu Chuck Eye", value: 16 },
+  { name: "Full Blood Thick-cut Wagyu Short Rib", value: 19 },
+  { name: "Wagyu Skirt Steak / Harami", value: 17 },
+  { name: "Thin Sliced Beef Tongue", value: 12 },
+  { name: "Wagyu Finger Meat", value: 13 },
+  { name: "Black Pepper Beef Cubes", value: 10 },
+  { name: "Thin Cut Pork Belly", value: 8 },
+  { name: "Iberico Pork", value: 12 }
+];
+
+const GOLD_EXTRA_MEATS = [
+  { name: "A5 Brisket", value: 22 },
+  { name: "M8-9 Wagyu Chuck Eye w/ Chubby Sriracha", value: 18 },
+  { name: "Beef Tongue Platter", value: 14 },
+  { name: "Margra Lamb", value: 13 }
+];
+
+const SPECIAL_MEATS_BASE = [
+  { name: "A5 Miyazaki Wagyu Short Rib", value: 40 },
+  { name: "A5 Wagyu Otoro Thick Cut", value: 45 },
+  { name: "A5 Miyazaki Ribeye", value: 44 },
+  { name: "A5 Finger Meat", value: 34 },
+  { name: "Full-Blood Wagyu Steak", value: 38 },
+  { name: "Dry Aged Chuck Eye Roll", value: 32 }
+];
+
+const SPECIAL_DISHES_ALL = [
+  { name: "A5 Wagyu Foie Gras Nigiri", value: 24 },
+  { name: "A5 Wagyu Uni Caviar Nigiri (Raw)", value: 28 },
+  { name: "Hokkaido Uni Mentaiko", value: 26 },
+  { name: "Uni Caviar Lobster Roll", value: 30 }
+];
+
+const HOUSE_SELECTIONS = [
+  { name: "Scallop", value: 10 },
+  { name: "Unagi", value: 9 },
+  { name: "Crispy Grass Carp Strips", value: 7 },
+  { name: "Spicy Wagyu Hand Roll", value: 12 }
+];
+
+const SEAFOOD = [
+  { name: "Argentina Shrimp", value: 8 },
+  { name: "Shrimp", value: 5 },
+  { name: "Squid", value: 5 }
+];
+
+const SUSHI = [
+  { name: "Unagi Avocado Hand Roll", value: 9 },
+  { name: "Salmon Hand Roll", value: 7 },
+  { name: "Yellowtail Jalapeño Hand Roll", value: 8 },
+  { name: "Salmon Nigiri", value: 5 },
+  { name: "Yellowtail Nigiri", value: 6 },
+  { name: "Wagyu Nigiri", value: 10 },
+  { name: "Seared Salmon Nigiri", value: 6 },
+  { name: "Salmon Carpaccio", value: 8 },
+  { name: "Yellowtail Carpaccio", value: 8 }
+];
+
+const SIGNATURE_DISHES = [
+  { name: "Tom Yum King Pot", value: 12 },{ name: "Kimchi Hotpot", value: 10 },
+  { name: "Spicy Wagyu Pot", value: 14 },{ name: "Shrimp Tempura", value: 10 },
+  { name: "Truffle Fries", value: 10 },{ name: "Takoyaki", value: 8 },
+  { name: "Fried Calamari", value: 10 },{ name: "Fried Chicken Karaage", value: 9 },
+  { name: "Scallion Gyoza", value: 8 },{ name: "Fried Chicken Wings", value: 10 },
+  { name: "Orleans Style Chicken", value: 9 },{ name: "Steamed Eggs", value: 5 },
+  { name: "Wagyu Stone Pot Rice", value: 14 },{ name: "Yangzhou Fried Rice", value: 10 },
+  { name: "Wagyu Curry Rice", value: 12 },{ name: "Kimchi Dumpling", value: 8 },
+  { name: "Octopus Dumpling", value: 9 },{ name: "Veggie Shumai", value: 7 },
+  { name: "Steamed Lobster Dumpling", value: 12 },{ name: "Shrimp Dumpling", value: 8 }
+];
+
+const SELF_SERVICE = [
+  { name: "Corn Cheese", value: 5 },{ name: "Cheese Durian", value: 6 },
+  { name: "Seaweed Salad", value: 5 },{ name: "Mung Bean Sprouts", value: 3 },
+  { name: "Lettuce & Cucumber", value: 3 },{ name: "Daikon Radish", value: 3 },
+  { name: "Herb Potato", value: 4 },{ name: "Okra Salad", value: 4 },
+  { name: "Kimchi", value: 3 },{ name: "Surimi", value: 4 },
+  { name: "Ring Oyster Mushroom", value: 4 },{ name: "Mushroom", value: 3 },
+  { name: "Chinese Sweet Potato", value: 4 },{ name: "Lotus Root", value: 4 },
+  { name: "Chinese Yam", value: 3 },{ name: "Zucchini", value: 3 },
+  { name: "Wagyu Curry (self-serve)", value: 8 },{ name: "Miso Wagyu (self-serve)", value: 8 },
+  { name: "Original Grape Cake", value: 5 },{ name: "Chocolate Grape Cake", value: 5 },
+  { name: "Original Swiss Roll", value: 5 },{ name: "Tiramisu House Cake Cup", value: 6 },
+  { name: "Mango Mousse Cake", value: 6 },{ name: "Ice Cream (Vanilla & Chocolate)", value: 5 },
+  { name: "Matcha Waffle Mochi", value: 6 },{ name: "Egg Tart", value: 4 },
+  { name: "Cheese Tart", value: 4 },{ name: "Lychee Jelly", value: 4 },
+  { name: "Orange", value: 2 },{ name: "Pineapple", value: 3 },{ name: "Watermelon", value: 3 }
+];
+
+const DRINKS_CATEGORIES = [
+  { label:"Specialty Cocktails / Highballs", items:[
+    {name:"Chubby Mule",cost:14},{name:"Green Silk",cost:14},{name:"Margarita",cost:14},
+    {name:"Yuzu Garden",cost:14},{name:"The Soho Squeeze",cost:14}]},
+  { label:"Mocktails", items:[
+    {name:"Strawberry Lime Fizz",cost:8},{name:"Yuzu Lemonade",cost:8}]},
+  { label:"Beer", items:[
+    {name:"Kawaba Pearl Pilsner 12oz",cost:13},{name:"Sapporo (draft) 16oz",cost:11},
+    {name:"Sapporo Light 12oz",cost:8},{name:"Kyoto Yuzu Ale 12oz",cost:10},
+    {name:"Kyoto Matcha IPA 12oz",cost:10}]},
+  { label:"Wine", items:[
+    {name:"Prosecco 200ml",cost:10},{name:"Cabernet Sauvignon (glass)",cost:12},
+    {name:"Cabernet Sauvignon (bottle)",cost:28},{name:"Sauvignon Blanc (glass)",cost:12},
+    {name:"Sauvignon Blanc (bottle)",cost:28}]},
+  { label:"Ready to Drink (Cans)", items:[
+    {name:"Lychee-Kai Vodka",cost:6},{name:"Watermelon-Kai Vodka",cost:6}]},
+  { label:"Sake", items:[
+    {name:"Ozeki One Cup 180ml",cost:10},{name:"Dassai 45 Junmai Daiginjo 200ml",cost:12},
+    {name:"Perfect Snow Nigori 300ml",cost:17},{name:"Kikusui Junmai Ginjo 300ml",cost:19},
+    {name:"Kubota Junmai Daiginjo 300ml",cost:25},{name:"Kubota Junmai Daiginjo (Manju) 300ml",cost:60},
+    {name:"Dassai 23 Junmai Daiginjo 300ml",cost:79},{name:'Sakari "No.21" Yuzu Sake 700ml',cost:49},
+    {name:"Hizo Otokoyama Junmai Ginjo 720ml",cost:42},{name:"Mio Sparkling Sake 750ml",cost:36}]},
+  { label:"Soju", items:[
+    {name:"Jinro is Back 375ml",cost:15},{name:"Jinro Peach 375ml",cost:14},
+    {name:"Jinro Grape 375ml",cost:14},{name:"Jinro Strawberry 375ml",cost:14}]},
+  { label:"Spirits (2oz pours)", items:[
+    {name:"Toki Japanese Whiskey",cost:12},{name:"Yoichi Single Malt",cost:19},
+    {name:'Hibiki "Japanese Harmony"',cost:21},{name:"Hakushu Single Malt",cost:39},
+    {name:"Yamazaki Single Malt",cost:42}]}
+];
+
+/* ── Tier Definitions ── */
+const TIERS = {
+  silver: {
+    name: "Silver", regular: 59.99, member: 49.99,
+    features: ["13 unlimited meat cuts","Seafood & Sushi","Signature dishes","Self-service station","No A5 specials"],
+    build() {
+      return {
+        meats: { title:"MEATS (UNLIMITED)", portionNote:"Yakiniku-style thin slices, ~2-3oz per plate", type:"counter", items:[...SILVER_MEATS] },
+        seafood: { title:"SEAFOOD", type:"counter", items:[...SEAFOOD] },
+        sushi: { title:"SUSHI", portionNote:'Reviewers: "on par with some Omakase places"', type:"counter", items:[...SUSHI] },
+        signatureDishes: { title:"SIGNATURE DISHES", type:"counter", items:[...SIGNATURE_DISHES] },
+        selfService: { title:"SELF SERVICE STATION", portionNote:"Unlimited — incl. drinks, milk tea, soft serve, fruits", type:"counter", items:[...SELF_SERVICE] },
+        drinks: { title:"DRINKS (EXTRA COST)", type:"drinks", categories:DRINKS_CATEGORIES }
+      };
+    }
+  },
+  gold: {
+    name: "Gold", regular: 79.99, member: 65,
+    features: ["1 Special Meat (A5)","1 Special Dish","17 unlimited meat cuts","House selections","All AYCE items"],
+    build() {
+      return {
+        specialMeats: { title:"SPECIAL MEATS", subtitle:"Choose 1 — thin yakiniku slices, ~2oz", type:"dropdown", picks:1, items:[{name:"None",value:0},...SPECIAL_MEATS_BASE] },
+        specialDishes: { title:"SPECIAL DISHES", subtitle:"Choose 1 — single piece", type:"dropdown", picks:1, items:[{name:"None",value:0},...SPECIAL_DISHES_ALL] },
+        meats: { title:"MEATS (UNLIMITED)", portionNote:"Yakiniku-style thin slices, ~2-3oz per plate", type:"counter", items:[...GOLD_EXTRA_MEATS,...SILVER_MEATS] },
+        houseSelections: { title:"HOUSE SELECTIONS", type:"counter", items:[...HOUSE_SELECTIONS] },
+        seafood: { title:"SEAFOOD", type:"counter", items:[...SEAFOOD] },
+        sushi: { title:"SUSHI", portionNote:'Reviewers: "on par with some Omakase places"', type:"counter", items:[...SUSHI] },
+        signatureDishes: { title:"SIGNATURE DISHES", type:"counter", items:[...SIGNATURE_DISHES] },
+        selfService: { title:"SELF SERVICE STATION", portionNote:"Unlimited — incl. drinks, milk tea, soft serve, fruits", type:"counter", items:[...SELF_SERVICE] },
+        drinks: { title:"DRINKS (EXTRA COST)", type:"drinks", categories:DRINKS_CATEGORIES }
+      };
+    }
+  },
+  diamond: {
+    name: "Diamond", regular: 89.99, member: 75,
+    features: ["2 Special Meats (A5)","2 Special Dishes","17 unlimited meat cuts","House selections","All AYCE items"],
+    build() {
+      return {
+        specialMeats: { title:"SPECIAL MEATS", subtitle:"Choose 2 — thin yakiniku slices, ~2oz", type:"dropdown", picks:2, items:[{name:"None",value:0},...SPECIAL_MEATS_BASE,{name:"A5 Striploin 2oz ✦",value:48}] },
+        specialDishes: { title:"SPECIAL DISHES", subtitle:"Choose 2 — single piece", type:"dropdown", picks:2, items:[{name:"None",value:0},...SPECIAL_DISHES_ALL] },
+        meats: { title:"MEATS (UNLIMITED)", portionNote:"Yakiniku-style thin slices, ~2-3oz per plate", type:"counter", items:[...GOLD_EXTRA_MEATS,...SILVER_MEATS] },
+        houseSelections: { title:"HOUSE SELECTIONS", type:"counter", items:[...HOUSE_SELECTIONS] },
+        seafood: { title:"SEAFOOD", type:"counter", items:[...SEAFOOD] },
+        sushi: { title:"SUSHI", portionNote:'Reviewers: "on par with some Omakase places"', type:"counter", items:[...SUSHI] },
+        signatureDishes: { title:"SIGNATURE DISHES", type:"counter", items:[...SIGNATURE_DISHES] },
+        selfService: { title:"SELF SERVICE STATION", portionNote:"Unlimited — incl. drinks, milk tea, soft serve, fruits", type:"counter", items:[...SELF_SERVICE] },
+        drinks: { title:"DRINKS (EXTRA COST)", type:"drinks", categories:DRINKS_CATEGORIES }
+      };
+    }
+  }
+};
+
+/* ══════════════════════════════════════════
+   STATE
+   ══════════════════════════════════════════ */
+let isMember = true;
+let activeTier = null;
+let BASE_COST = 0;
+let DATA = {};
+let state = {};
+
+/* ── Timer state ── */
+let timerStarted = false;
+let timerStartMs = 0;
+let timerInterval = null;
+
+/* ══════════════════════════════════════════
+   MODAL FLOW
+   ══════════════════════════════════════════ */
+function chooseMembership(member) {
+  isMember = member;
+  document.getElementById("memberModal").classList.add("hidden");
+  document.getElementById("tierModal").classList.remove("hidden");
+  document.getElementById("tierModalSub").textContent = member ? "MEMBER PRICING" : "REGULAR PRICING";
+  buildTierCards();
+}
+
+function buildTierCards() {
+  const container = document.getElementById("tierCards");
+  container.innerHTML = "";
+  for (const [key, t] of Object.entries(TIERS)) {
+    const price = isMember ? t.member : t.regular;
+    const otherPrice = isMember ? t.regular : null;
+    const card = document.createElement("div");
+    card.className = `tier-card ${key}${key === 'gold' ? ' recommended' : ''}`;
+    card.style.background = '#1a0e2e';
+    card.innerHTML = `
+      <div class="tc-name">${t.name}</div>
+      <div class="tc-price">$${price % 1 === 0 ? price : price.toFixed(2)}</div>
+      ${otherPrice ? `<div class="tc-orig">$${otherPrice.toFixed(2)}</div>` : '<div class="tc-orig">&nbsp;</div>'}
+      <div class="tc-feat">${t.features.map(f => '• ' + f).join('<br>')}</div>
+    `;
+    card.addEventListener("click", () => chooseTier(key));
+    container.appendChild(card);
+  }
+}
+
+function chooseTier(tierKey) {
+  activeTier = tierKey;
+  const t = TIERS[tierKey];
+  BASE_COST = isMember ? t.member : t.regular;
+  DATA = t.build();
+
+  document.getElementById("tierModal").classList.add("hidden");
+  document.getElementById("scoreboard").classList.remove("locked");
+  document.getElementById("timerBar").classList.add("visible");
+
+  const tag = isMember ? "Member" : "Standard";
+  document.getElementById("subtitleText").innerHTML =
+    `${t.name} Tier (${tag}) &bull; AYCE Scoreboard`;
+
+  initState();
+  buildSections();
+  calculateTotals();
+}
+
+/* ══════════════════════════════════════════
+   DRINK HELPERS
+   ══════════════════════════════════════════ */
+function flatDrinkItems() {
+  const r = [];
+  if (DATA.drinks) DATA.drinks.categories.forEach(c => c.items.forEach(i => r.push(i)));
+  return r;
+}
+
+/* ══════════════════════════════════════════
+   STATE INIT / TOTALS
+   ══════════════════════════════════════════ */
+function initState() {
+  state = { dropdowns: {}, counters: {} };
+  for (const [key, sec] of Object.entries(DATA)) {
+    if (sec.type === "dropdown") {
+      state.dropdowns[key] = new Array(sec.picks || 1).fill(0);
+    } else if (sec.type === "drinks") {
+      flatDrinkItems().forEach((_, i) => { state.counters[`${key}_${i}`] = 0; });
+    } else {
+      sec.items.forEach((_, i) => { state.counters[`${key}_${i}`] = 0; });
+    }
+  }
+}
+
+function calculateTotals() {
+  let foodValue = 0, extraCost = 0;
+  for (const [key, sec] of Object.entries(DATA)) {
+    if (sec.type === "dropdown") {
+      state.dropdowns[key].forEach(idx => { foodValue += sec.items[idx].value; });
+    } else if (sec.type === "drinks") {
+      flatDrinkItems().forEach((item, i) => { extraCost += (state.counters[`${key}_${i}`] || 0) * item.cost; });
+    } else {
+      sec.items.forEach((item, i) => { foodValue += (state.counters[`${key}_${i}`] || 0) * item.value; });
+    }
+  }
+  const totalCost = BASE_COST + extraCost;
+  const net = foodValue - totalCost;
+  document.getElementById("totalFoodValue").textContent = `$${foodValue}`;
+  const costFmt = totalCost % 1 === 0 ? totalCost : totalCost.toFixed(2);
+  document.getElementById("totalCost").textContent = `$${costFmt}`;
+  const netEl = document.getElementById("netValue");
+  const absNet = Math.abs(net);
+  const netFmt = absNet % 1 === 0 ? absNet : absNet.toFixed(2);
+  netEl.textContent = net >= 0 ? `+$${netFmt}` : `-$${netFmt}`;
+  netEl.className = `value value-net ${net >= 0 ? 'positive' : 'negative'}`;
+  updateSectionTotals();
+}
+
+function updateSectionTotals() {
+  for (const [key, sec] of Object.entries(DATA)) {
+    const el = document.getElementById(`section-total-${key}`);
+    if (!el) continue;
+    let total = 0;
+    if (sec.type === "dropdown") {
+      state.dropdowns[key].forEach(idx => { total += sec.items[idx].value; });
+    } else if (sec.type === "drinks") {
+      flatDrinkItems().forEach((item, i) => { total += (state.counters[`${key}_${i}`] || 0) * item.cost; });
+      el.textContent = total > 0 ? `-$${total}` : "$0";
+      el.style.color = total > 0 ? "var(--led-red)" : "var(--led-green)";
+      return;
+    } else {
+      sec.items.forEach((item, i) => { total += (state.counters[`${key}_${i}`] || 0) * item.value; });
+    }
+    el.textContent = `+$${total}`;
+  }
+}
+
+/* ══════════════════════════════════════════
+   BUILD SECTIONS
+   ══════════════════════════════════════════ */
+function buildSections() {
+  const container = document.getElementById("sectionsContainer");
+  container.innerHTML = "";
+
+  for (const [key, section] of Object.entries(DATA)) {
+    const sec = document.createElement("div");
+    sec.className = "section";
+    const isDropdown = section.type === "dropdown";
+    if (!isDropdown) sec.classList.add("collapsed");
+
+    const header = document.createElement("div");
+    header.className = "section-header";
+    header.innerHTML = `<h2>${section.title}</h2><span style="display:flex;align-items:center;gap:10px;"><span class="section-total" id="section-total-${key}">$0</span><span class="toggle-icon">▼</span></span>`;
+    header.addEventListener("click", () => sec.classList.toggle("collapsed"));
+    sec.appendChild(header);
+
+    const body = document.createElement("div");
+    body.className = "section-body";
+
+    if (isDropdown) {
+      if (section.subtitle) {
+        const sub = document.createElement("div");
+        sub.className = "portion-note";
+        sub.textContent = section.subtitle;
+        body.appendChild(sub);
+      }
+      const picks = section.picks || 1;
+      for (let p = 0; p < picks; p++) {
+        if (picks > 1) {
+          const lbl = document.createElement("div");
+          lbl.className = "selector-label";
+          lbl.textContent = `PICK ${p + 1}`;
+          body.appendChild(lbl);
+        }
+        const row = document.createElement("div");
+        row.className = "selector-row";
+        const sel = document.createElement("select");
+        sel.dataset.sectionKey = key;
+        sel.dataset.pickIndex = p;
+        section.items.forEach((item, i) => {
+          const opt = document.createElement("option");
+          opt.value = i;
+          opt.textContent = item.value > 0 ? `${item.name}  (~$${item.value})` : item.name;
+          sel.appendChild(opt);
+        });
+        const valSpan = document.createElement("span");
+        valSpan.className = "sel-value";
+        valSpan.id = `sel-value-${key}-${p}`;
+        valSpan.textContent = "$0";
+        sel.addEventListener("change", () => {
+          const pi = parseInt(sel.dataset.pickIndex);
+          state.dropdowns[key][pi] = parseInt(sel.value);
+          const val = section.items[parseInt(sel.value)].value;
+          valSpan.textContent = val > 0 ? `+$${val}` : "$0";
+          calculateTotals();
+        });
+        row.appendChild(sel);
+        row.appendChild(valSpan);
+        body.appendChild(row);
+      }
+
+    } else if (section.type === "drinks") {
+      let gi = 0;
+      section.categories.forEach(cat => {
+        const ch = document.createElement("div");
+        ch.className = "drink-category-header";
+        ch.textContent = cat.label;
+        body.appendChild(ch);
+        cat.items.forEach(item => {
+          const cKey = `${key}_${gi}`;
+          const row = document.createElement("div");
+          row.className = "item-row";
+          row.innerHTML = `<span class="item-name">${item.name}</span><span class="drink-cost-tag">-$${item.cost}/ea</span><div class="item-controls"><button data-key="${cKey}" data-dir="-1">−</button><div class="count" id="count-${cKey}">0</div><button data-key="${cKey}" data-dir="1">+</button></div><span class="item-row-total" id="rowtotal-${cKey}" style="color:var(--led-red)">$0</span>`;
+          body.appendChild(row);
+          gi++;
+        });
+      });
+    } else {
+      if (section.portionNote) {
+        const note = document.createElement("div");
+        note.className = "portion-note";
+        note.textContent = section.portionNote;
+        body.appendChild(note);
+      }
+      section.items.forEach((item, i) => {
+        const cKey = `${key}_${i}`;
+        const row = document.createElement("div");
+        row.className = "item-row";
+        row.innerHTML = `<span class="item-name">${item.name}</span><span class="item-unit-price">~$${item.value}</span><div class="item-controls"><button data-key="${cKey}" data-dir="-1">−</button><div class="count" id="count-${cKey}">0</div><button data-key="${cKey}" data-dir="1">+</button></div><span class="item-row-total" id="rowtotal-${cKey}">$0</span>`;
+        body.appendChild(row);
+      });
+    }
+
+    sec.appendChild(body);
+    container.appendChild(sec);
+  }
+
+  container.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-key]");
+    if (!btn) return;
+    const cKey = btn.dataset.key;
+    const dir = parseInt(btn.dataset.dir);
+    state.counters[cKey] = Math.max(0, (state.counters[cKey] || 0) + dir);
+    document.getElementById(`count-${cKey}`).textContent = state.counters[cKey];
+
+    const sectionKey = cKey.substring(0, cKey.lastIndexOf("_"));
+    const idx = parseInt(cKey.substring(cKey.lastIndexOf("_") + 1));
+    const sectionData = DATA[sectionKey];
+    const rowTotalEl = document.getElementById(`rowtotal-${cKey}`);
+
+    if (sectionData.type === "drinks") {
+      const cost = flatDrinkItems()[idx].cost;
+      const total = state.counters[cKey] * cost;
+      rowTotalEl.textContent = total > 0 ? `-$${total}` : "$0";
+    } else {
+      const total = state.counters[cKey] * sectionData.items[idx].value;
+      rowTotalEl.textContent = total > 0 ? `+$${total}` : "$0";
+    }
+    calculateTotals();
+  });
+}
+
+function resetAll() {
+  if (!confirm("Reset the entire scoreboard?")) return;
+  initState();
+  buildSections();
+  calculateTotals();
+}
+
+/* ══════════════════════════════════════════
+   DINNER TIMER
+   ══════════════════════════════════════════ */
+const ORDER_DURATION = 70 * 60;
+const DINNER_DURATION = 90 * 60;
+
+function startTimer() {
+  timerStarted = true;
+  timerStartMs = Date.now();
+  document.getElementById("startTimerBtn").style.display = "none";
+  renderTimerDisplay();
+  timerInterval = setInterval(tickTimer, 500);
+}
+
+function renderTimerDisplay() {
+  const inner = document.getElementById("timerInner");
+  inner.innerHTML = `
+    <div class="timer-block">
+      <div class="timer-label">ORDERING</div>
+      <div class="timer-digits" id="orderDigits">${fmtTime(ORDER_DURATION)}</div>
+    </div>
+    <div class="timer-sep">│</div>
+    <div class="timer-block">
+      <div class="timer-label">DINNER</div>
+      <div class="timer-digits" id="dinnerDigits">${fmtTime(DINNER_DURATION)}</div>
+    </div>
+  `;
+}
+
+function fmtTime(secs) {
+  if (secs <= 0) return "00:00";
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function tickTimer() {
+  const elapsed = Math.floor((Date.now() - timerStartMs) / 1000);
+  const orderLeft = Math.max(0, ORDER_DURATION - elapsed);
+  const dinnerLeft = Math.max(0, DINNER_DURATION - elapsed);
+
+  const oEl = document.getElementById("orderDigits");
+  const dEl = document.getElementById("dinnerDigits");
+  if (!oEl || !dEl) return;
+
+  if (orderLeft <= 0) {
+    oEl.textContent = "CLOSED";
+    oEl.className = "timer-digits expired pulse";
+  } else {
+    oEl.textContent = fmtTime(orderLeft);
+    oEl.className = "timer-digits" + (orderLeft <= 300 ? " warning pulse" : "");
+  }
+
+  if (dinnerLeft <= 0) {
+    dEl.textContent = "00:00";
+    dEl.className = "timer-digits expired pulse";
+    document.getElementById("gameOverBanner").style.display = "block";
+    document.getElementById("timerInner").style.display = "none";
+    clearInterval(timerInterval);
+  } else {
+    dEl.textContent = fmtTime(dinnerLeft);
+    dEl.className = "timer-digits" + (dinnerLeft <= 300 ? " warning pulse" : "");
+  }
+}
+
+/* ══════════════════════════════════════════
+   PIXEL COW (CHUBBY!) + 6 PEOPLE
+   ══════════════════════════════════════════ */
+(function buildScene() {
+  const cowGrid = [
+    "......HH........HH......",
+    ".......H........H.......",
+    ".....eWWWWWWWWWWWWe.....",
+    ".....eWWWWWWWWWWWWe.....",
+    "......WWBWWWWWWBWW......",
+    "......WWWWWWWWWWWW......",
+    "......WWPPPPPPPPWW......",
+    ".......WNPPPPPPNW.......",
+    "........WWWWWWWW........",
+    "......WWWWWWWWWWWW......",
+    "....WWWWWWWWWWWWWWWW....",
+    "..WWWWWWWWWWWWWWWWWWWW..",
+    ".WWWWWWWWWWWWWWWWWWWWWW.",
+    ".WWWBBBWWWWWWWWWWWWWWWW.",
+    ".WWWBBBWWWWWBBBBWWWWWWW.",
+    ".WWWWWWWWWWWBBBBWWWWWWW.",
+    ".WWWWWWWWWWWWWWWWWWWWWW.",
+    "..WWWWWWWWWWWWWWWWWWWW..",
+    "...WWWWWWWWWWWWWWWWWW...",
+    "...WW..WW......WW..WW...",
+    "...WW..WW......WW..WW...",
+    "...KK..KK......KK..KK..."
+  ];
+  const cowPal = {H:'#c8a060',e:'#888',W:'#fff',B:'#222',P:'#ffb6c1',N:'#e55',K:'#555'};
+
+  function gridToShadow(grid, pal) {
+    const sh = [];
+    grid.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        const c = row[x];
+        if (c !== '.' && pal[c]) sh.push(`${x}px ${y}px 0 ${pal[c]}`);
+      }
+    });
+    return sh.join(',');
+  }
+
+  const cowShadow = gridToShadow(cowGrid, cowPal);
+  document.getElementById('pixelCow').style.boxShadow = cowShadow;
+  document.getElementById('pixelCowModal').style.boxShadow = cowShadow;
+
+  const guyGrid = [
+    ".HHH.","HSSSH",".SBS.",".SSS.",".TTT.","TTTTT",".TTT.",".PPP.",".P.P.",".K.K."
+  ];
+  const girlGrid = [
+    ".HHH.","HSSSH","HSBSH","H.S.H",".RRR.","RRRRR","RRRRR",".RRR.",".S.S.",".K.K."
+  ];
+
+  const people = [
+    { grid: guyGrid,  pal: {H:'#4466cc',S:'#e8b878',B:'#222',T:'#33aa55',P:'#3355aa',K:'#555'} },
+    { grid: guyGrid,  pal: {H:'#8b5e3c',S:'#e8b878',B:'#222',T:'#cc3333',P:'#2a2a55',K:'#555'} },
+    { grid: girlGrid, pal: {H:'#f0d060',S:'#e8b878',B:'#222',R:'#ff69b4',K:'#555'} },
+    { grid: guyGrid,  pal: {H:'#222',S:'#e8b878',B:'#333',T:'#ee8833',P:'#666',K:'#555'} },
+    { grid: girlGrid, pal: {H:'#cc3344',S:'#e8b878',B:'#222',R:'#9944cc',K:'#555'} },
+    { grid: guyGrid,  pal: {H:'#553322',S:'#e8b878',B:'#222',T:'#229999',P:'#664422',K:'#555'} }
+  ];
+
+  function buildPeopleInto(leftId, rightId) {
+    const leftEl = document.getElementById(leftId);
+    const rightEl = document.getElementById(rightId);
+    people.forEach((p, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'person-wrap';
+      const px = document.createElement('div');
+      px.className = 'person-px';
+      px.style.boxShadow = gridToShadow(p.grid, p.pal);
+      wrap.appendChild(px);
+      (i < 3 ? leftEl : rightEl).appendChild(wrap);
+    });
+  }
+
+  buildPeopleInto('peopleLeftModal', 'peopleRightModal');
+  buildPeopleInto('peopleLeftMain', 'peopleRightMain');
+})();
+</script>
+</body>
+</html>
